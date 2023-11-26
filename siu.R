@@ -1,1 +1,0 @@
-siusiak spulluj mi go
