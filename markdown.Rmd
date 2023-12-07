@@ -22,23 +22,34 @@ library(dlookr)
 library(xts)
 library(quantmod)
 library(ROCR)
+```
 
+```{r}
 attach(agencja_nieruchomosci)
 braki_danych <- colSums(is.na(agencja_nieruchomosci))
 braki_danych
-\
-jdnfckjwfwoidisdcoiJCOIJMASDIKCMOksdcmkAMCKMDCKLJsdkcjSDC
-
 ```
+Weryfikacja danych wykazała, że nasze zbiory są kompleksowe i nie zawierają żadnych braków danych. Ta sytuacja umożliwia nam pełne skorzystanie z dostępnych danych do przeprowadzenia analizy i uzyskania wiarygodnych wyników.
 
 
-
-```{r cars}
+```{r}
 #Statystki poszczególnych zmiennych
 summary(agencja_nieruchomosci)
 
 ```
 
+```{r}
+
+boxplot(agencja_nieruchomosci$price, main = "wykres pudełkowy dla zmiennej price", 
+        xlab = "price", ylab = "Wartości", 
+        col = "cyan3", border = "darkslateblue", outline = TRUE, lwd = 1.2)
+
+```
+Wyniki analizy statystycznej jasno wskazują, że nasze dane nie zawierają skrajnych ani nielogicznych wartości. Ten pozytywny wniosek pozwala nam na pewne podejście do dalszych analiz, mając pewność co do integralności naszych danych.
 
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
+
+
+
+
