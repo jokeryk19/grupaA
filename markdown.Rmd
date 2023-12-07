@@ -1,0 +1,55 @@
+---
+title: "Grupa A"
+author: "Julianna Waluś"
+date: "7 12 2023"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+#Sprawdzanie braków danych
+library(ggplot2)
+library(rmdformats)
+library(validate)
+library(validatetools)
+library(dcmodify)
+library(errorlocate)
+library(deductive)
+library(VIM)
+library(simputation)
+library(lumberjack)
+library(ISLR) 
+library(dlookr)
+library(xts)
+library(quantmod)
+library(ROCR)
+```
+
+```{r}
+attach(agencja_nieruchomosci)
+braki_danych <- colSums(is.na(agencja_nieruchomosci))
+braki_danych
+```
+Weryfikacja danych wykazała, że nasze zbiory są kompleksowe i nie zawierają żadnych braków danych. Ta sytuacja umożliwia nam pełne skorzystanie z dostępnych danych do przeprowadzenia analizy i uzyskania wiarygodnych wyników.
+
+
+```{r}
+#Statystki poszczególnych zmiennych
+summary(agencja_nieruchomosci)
+
+```
+
+```{r}
+
+boxplot(agencja_nieruchomosci$price, main = "wykres pudełkowy dla zmiennej price", 
+        xlab = "price", ylab = "Wartości", 
+        col = "cyan3", border = "darkslateblue", outline = TRUE, lwd = 1.2)
+
+```
+Wyniki analizy statystycznej jasno wskazują, że nasze dane nie zawierają skrajnych ani nielogicznych wartości. Ten pozytywny wniosek pozwala nam na pewne podejście do dalszych analiz, mając pewność co do integralności naszych danych.
+
+
+
+
+
+
+
