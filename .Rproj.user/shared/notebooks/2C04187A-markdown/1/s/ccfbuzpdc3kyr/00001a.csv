@@ -1,0 +1,5 @@
+"0",""
+"0","boxplot(agencja_nieruchomosci$price, main = ""wykres pudełkowy dla zmiennej price"", "
+"0","        xlab = ""price"", ylab = ""Wartości"", "
+"0","        col = ""cyan3"", border = ""darkslateblue"", outline = TRUE, lwd = 1.2)"
+"0",""

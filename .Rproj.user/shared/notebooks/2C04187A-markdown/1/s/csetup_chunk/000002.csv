@@ -1,0 +1,9 @@
+"0","#Sprawdzanie braków danych"
+"0","library(ggplot2)"
+"0","library(rmdformats)"
+"2","Warning:"
+"2"," pakiet ‘rmdformats’ został zbudowany w wersji R 4.1.2
+"
+"0","library(validate)"
+"2","Error in library(validate) : nie ma pakietu o nazwie ‘validate’
+"
