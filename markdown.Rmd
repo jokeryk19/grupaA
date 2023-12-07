@@ -4,9 +4,18 @@ author: "Julianna Waluś"
 date: "7 12 2023"
 output: html_document
 ---
-
 ```{r setup, include=FALSE}
-#Sprawdzanie braków danych
+knitr::opts_chunk$set(echo = TRUE)
+options(scipen = 999, digits=3)  #wyłączam notację naukową, dajemy 3 miejsca po przecinku
+library(tidyverse)   #pakiet wranglingowy, z fajkami i grafiką ggplot2
+library(rmdformats)  #pakiet z szablonami Markdown
+library(magrittr)   # pakiet do fajek
+library(lubridate)  # pakiet do operacji na datach
+library(dplyr)
+library(tidyr)
+library(naniar)
+library(visdat)
+library(dlookr)
 library(ggplot2)
 library(rmdformats)
 library(validate)
@@ -22,34 +31,37 @@ library(dlookr)
 library(xts)
 library(quantmod)
 library(ROCR)
+library(Information)
+library(scorecard)
+library(readr)
+agencja_nieruchomosci <- read_csv("agencja_nieruchomosci.csv")
+View(agencja_nieruchomosci)
+getwd()
 ```
 
 ```{r}
+### Wprowadzenie do projektu
+#Projekt z przedmiotu "analiza danych" będzie koncentrował się na kompleksowej analizie danych z agencji nieruchomości. Będziemy pracować na zestawie danych zawierającym 13 kluczowych zmiennych, w tym cenę nieruchomości, powierzchnię, liczbę sypialni i łazienek, liczbę pięter, dostępność połączenia z główną drogą, obecność pokoju gościnnego, piwnicy, systemu ogrzewania wody, klimatyzacji, liczby miejsc parkingowych, lokalizacji w preferowanym obszarze oraz statusu umeblowania. Naszym celem będzie czyszczenie, przygotowanie i poddanie analizie tych danych do dalszych badań, aby lepiej zrozumieć trendy i wzorce w branży nieruchomości.
+
+```
+
+```{r}
+#Sprawdzanie braków danych
 attach(agencja_nieruchomosci)
 braki_danych <- colSums(is.na(agencja_nieruchomosci))
 braki_danych
+
+
 ```
-Weryfikacja danych wykazała, że nasze zbiory są kompleksowe i nie zawierają żadnych braków danych. Ta sytuacja umożliwia nam pełne skorzystanie z dostępnych danych do przeprowadzenia analizy i uzyskania wiarygodnych wyników.
 
 
-```{r}
+
+```{r cars}
 #Statystki poszczególnych zmiennych
 summary(agencja_nieruchomosci)
 
 ```
 
-```{r}
-
-boxplot(agencja_nieruchomosci$price, main = "wykres pudełkowy dla zmiennej price", 
-        xlab = "price", ylab = "Wartości", 
-        col = "cyan3", border = "darkslateblue", outline = TRUE, lwd = 1.2)
-
-```
-Wyniki analizy statystycznej jasno wskazują, że nasze dane nie zawierają skrajnych ani nielogicznych wartości. Ten pozytywny wniosek pozwala nam na pewne podejście do dalszych analiz, mając pewność co do integralności naszych danych.
 
 
-
-
-
-
-
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
