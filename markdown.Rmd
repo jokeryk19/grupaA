@@ -38,6 +38,7 @@ summary(agencja_nieruchomosci)
 
 ```
 
+
 ```{r}
 
 boxplot(agencja_nieruchomosci$price, main = "wykres pudełkowy dla zmiennej price", 
@@ -47,7 +48,12 @@ boxplot(agencja_nieruchomosci$price, main = "wykres pudełkowy dla zmiennej pric
 ```
 Wyniki analizy statystycznej jasno wskazują, że nasze dane nie zawierają skrajnych ani nielogicznych wartości. Ten pozytywny wniosek pozwala nam na pewne podejście do dalszych analiz, mając pewność co do integralności naszych danych.
 
+```{r}
+plot(agencja_nieruchomosci$price, agencja_nieruchomosci$area,  type = "o", col = "cyan3",
+      main = "Wykres obserwacji dla zmiennej Cena",
+     xlab = "Obserwacja", ylab = "Cena"     )
 
+```
 
 
 
