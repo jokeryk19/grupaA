@@ -7,6 +7,12 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+#Sprawdzanie braków danych
+
+attach(agencja_nieruchomosci)
+braki_danych <- colSums(is.na(agencja_nieruchomosci))
+braki_danych
+
 ```
 
 ## R Markdown
