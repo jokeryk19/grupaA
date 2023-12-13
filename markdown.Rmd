@@ -47,19 +47,79 @@ getwd()
 ```
 
 ```{r}
-#Sprawdzanie braków danych
 attach(agencja_nieruchomosci)
 braki_danych <- colSums(is.na(agencja_nieruchomosci))
 braki_danych
+#Weryfikacja danych wykazała, że nasze zbiory są kompleksowe i nie zawierają żadnych braków danych. Ta sytuacja umożliwia nam pełne skorzystanie z dostępnych danych do przeprowadzenia analizy i uzyskania wiarygodnych wyników.
 
+agencja_nieruchomosci <- agencja_nieruchomosci %>%
+  mutate(area_m2=area/10.764) %>%
+  relocate(area_m2, .after=area)
+#Dodanie danych powierzchni w m2
 
+agencja_nieruchomosci <- agencja_nieruchomosci %>%
+  mutate(Cena_za_m2=price/area_m2) %>%
+  relocate(Cena_za_m2, .after = price)
 ```
 
 
-
-```{r cars}
+```{r}
 #Statystki poszczególnych zmiennych
 summary(agencja_nieruchomosci)
 
 ```
 
+
+```{r}
+
+boxplot(agencja_nieruchomosci$price, main = "wykres pudełkowy dla zmiennej price", 
+        xlab = "price", ylab = "Wartości", 
+        col = "cyan3", border = "darkslateblue", outline = TRUE, lwd = 1.2)
+#Wyniki analizy statystycznej jasno wskazują, że nasze dane nie zawierają skrajnych ani nielogicznych wartości. Ten pozytywny wniosek pozwala nam na pewne podejście do dalszych analiz, mając pewność co do integralności naszych danych.
+
+```
+
+```{r}
+plot(agencja_nieruchomosci$price, agencja_nieruchomosci$area_m2,  type = "o", col = "cyan3",
+      main = "Wykres obserwacji dla zmiennej Cena",
+     xlab = "Obserwacja", ylab = "Cena"     )
+
+```
+```{r}
+ggplot(agencja_nieruchomosci, aes(x=price, y=after_stat(density))) + geom_histogram(fill= "darkslateblue", bins=30, color="cyan3") + geom_density(color="red", size=1)
+
+ggplot(agencja_nieruchomosci, aes(x=Cena_za_m2, y=after_stat(density))) + geom_histogram(fill= "darkslateblue", bins=30, color="cyan3") + geom_density(color="red", size=1)
+
+#Pokazanie rozkładu cen mieszkań oraz ceny za m2 na histogramie wraz z linią gęstości. 
+```
+```{r}
+ggplot(agencja_nieruchomosci, aes(x=price, y=area_m2, color=bedrooms)) + geom_point() + scale_x_log10() + scale_y_log10() + theme_classic()
+#Ilustracja rozkładu ceny nieruchomości na podstawie jej powierzchni, na wykresie mamy także podział na ilość pokojów. To wszystko mamy na zlogarytmowanej skali.
+```
+
+```{r}
+ggplot(agencja_nieruchomosci, aes(price)) + geom_boxplot(aes(fill=factor(bedrooms))) + facet_wrap(bedrooms) +   labs(title="Rozkład cen nieruchomości w zależności od liczby sypialni")
+
+ggplot(agencja_nieruchomosci, aes(price)) + geom_boxplot(aes(fill=factor(bathrooms))) + facet_wrap(bathrooms) +   labs(title="Rozkład cen nieruchomości w zależności od liczby łazienek")
+
+ggplot(agencja_nieruchomosci, aes(price)) + geom_boxplot(aes(fill=factor(stories))) + facet_wrap(stories) +   labs(title="Rozkład cen nieruchomości w zależności od liczby pięter")
+
+#Zilustrowanie na wykresach box plot zależności rozkładu ceny od wybranej zmiennej
+```
+
+```{r}
+willa <- agencja_nieruchomosci %>%
+  filter(area_m2 >=1000, prefarea=="yes")
+#Wyszukanie najtańszej willi (powierzchnia powyżej 1000m2 i w preferowanej okolicy)
+
+ggplot(willa, aes(x=price, y=Cena_za_m2)) + geom_point(size=3, color="cyan3")
+
+#Rozkład willi na wykresie ceny i ceny za m2
+  
+```
+
+```{r}
+ggplot(agencja_nieruchomosci, aes(x=price, y=area_m2, color=furnishingstatus)) + geom_point() + facet_wrap(parking) + labs(title="Rozkład cen nieruchomości w zależności od powierzchni z podziałem na ilość miejsc parkingowych i rozróżnieniem na status umeblowania")
+
+  
+```
