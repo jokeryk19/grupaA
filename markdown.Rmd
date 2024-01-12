@@ -123,3 +123,20 @@ ggplot(agencja_nieruchomosci, aes(x=price, y=area_m2, color=furnishingstatus)) +
 
   
 ```
+
+```{r}
+## Pytania badawcze, hipotezy
+# Cena mieszkania jest uzależniona od jego powierzchnii
+# Cena za m2 uzależniona od preferowanej lokalizacji/umeblowania
+# Cena mieszkania uzależniona od ilości sypilani/łazienek/pokoi gościnnych
+
+# ggbetweenstats(data=dane, x=jakościowy, y=ilosciowy)
+# ggpiestats -> ggbarstats (x=ryzyko, y=wyksztalcenie, data=dane)
+
+install.packages("ggstatsplot")
+library(ggstatsplot)
+ggbetweenstats(data=agencja_nieruchomosci, x= furnishingstatus, y=area_m2)
+install.packages("rstantools")
+library(rstantools)
+
+```
