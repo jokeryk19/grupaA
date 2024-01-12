@@ -1,1 +1,0 @@
-{"frames":[],"message":"Error in dane %>% select(IMDb.Score) %>% head(10) : \n  could not find function \"%>%\"\n"}
