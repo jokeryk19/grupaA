@@ -56,6 +56,24 @@ plot(agencja_nieruchomosci$price, agencja_nieruchomosci$area,  type = "o", col =
 ```
 
 
+##Wnioskowanie statystyczne
+
+#Pytanie badawcze: Cena mieszkania uzależniona od ilości sypialnii
+
+**Hipoteza zerowa (H0):** Nie ma statystycznie istotnej różnicy w cenie mieszkania w zależniości od liczby sypialnii.
+
+**Hipoteza alternatywna (H1)**: Istnieje statystycznie istotna różnica w cenie mieszkania w zależniości od liczby sypialnii.
 
 
+```{r echo=FALSE}
+ggbetweenstats(
+  data=agencja_nieruchomosci,
+  x=bedrooms,
+  y=price
+)
+```
+# Wnioski: Wartość p-value wynosi ok. 0,00132, czyli mniej niż standardowy poziom istotności 0,05. W takiej sytuacji mamy możliwość odrzucenia hipotezy zerowej, na rzecz hipotezy alternatywnej , sugerując tym samym, iż liczba sypialni wykazuje istotne statystycznie różnice w cenien mieszkania.
+
+
+#
 
