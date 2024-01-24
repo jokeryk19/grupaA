@@ -6,40 +6,141 @@ output: html_document
 ---
 
 ```{r setup, include=FALSE}
-#Sprawdzanie braków danych
-library(ggplot2)
-library(rmdformats)
-library(validate)
-library(validatetools)
-library(dcmodify)
-library(errorlocate)
-library(deductive)
-library(VIM)
-library(simputation)
-library(lumberjack)
-library(ISLR) 
-library(dlookr)
-library(xts)
-library(quantmod)
-library(ROCR)
-library(DMwR)
-library(Information)
-library(scorecard)
+knitr::opts_chunk$set(echo = TRUE)
+options(scipen = 999, digits=3)  #wyłączam notację naukową, dajemy 3 miejsca po przecinku
+library(tidyverse)   #pakiet wranglingowy, z fajkami i grafiką ggplot2
+library(rmdformats)  #pakiet z szablonami Markdown
+library(magrittr)   # pakiet do fajek
+library(lubridate)  # pakiet do operacji na datach
+library(dplyr)
+library(knitr)
 
+
+agencja_nieruchomosci <- read_csv("agencja_nieruchomosci.csv")
+View(agencja_nieruchomosci)
+getwd()
+```
+
+
+## Wprowadzenie do projektu
+
+Projekt z przedmiotu "analiza danych" będzie koncentrował się na kompleksowej analizie danych z agencji nieruchomości. Będziemy pracować na zestawie danych zawierającym 13 kluczowych zmiennych, w tym cenę nieruchomości, powierzchnię, liczbę sypialni i łazienek, liczbę pięter, dostępność połączenia z główną drogą, obecność pokoju gościnnego, piwnicy, systemu ogrzewania wody, klimatyzacji, liczby miejsc parkingowych, lokalizacji w preferowanym obszarze oraz statusu umeblowania. Naszym celem będzie czyszczenie, przygotowanie i poddanie analizie tych danych do dalszych badań, aby lepiej zrozumieć trendy i wzorce w branży nieruchomości.
+
+## Weryfikacja danych
+
+```{r}
 attach(agencja_nieruchomosci)
 braki_danych <- colSums(is.na(agencja_nieruchomosci))
 braki_danych
 
 ```
 
+Weryfikacja danych wykazała, że nasze zbiory są kompleksowe i nie zawierają żadnych braków danych. Ta sytuacja umożliwia nam pełne skorzystanie z dostępnych danych do przeprowadzenia analizy i uzyskania wiarygodnych wyników.
 
+```{r}
+#Zmiana stóp kwadratowych na metry kwadratowe. 1 stopa kwadratowa to 0.092903 metra kwadratowego
 
-```{r cars}
-#Statystki poszczególnych zmiennych
-summary(agencja_nieruchomosci)
+agencja_nieruchomosci <- agencja_nieruchomosci %>%
+  mutate(area = area*0.092903)
+
+#Cena za metr kwadratowy oraz cena za ilość pokoi
+
+agencja_nieruchomosci$price_per_sqft <- agencja_nieruchomosci$price / agencja_nieruchomosci$area
+  agencja_nieruchomosci <- agencja_nieruchomosci %>%
+    relocate(price_per_sqft, .after= price)
+  
+agencja_nieruchomosci$price_per_bedroom <- agencja_nieruchomosci$price / agencja_nieruchomosci$bedrooms 
+  agencja_nieruchomosci <- agencja_nieruchomosci %>%
+  relocate(price_per_bedroom, .after = price_per_sqft)
+
+# Zaokrąglanie do dwóch miejsc po przecinku w kolumnie price_per_sqft
+
+agencja_nieruchomosci <- agencja_nieruchomosci %>%
+  mutate(area = round(area,2),
+    price_per_sqft = round(price_per_sqft,2))
+
+#Ograniczenia zmiennych
+
+agencja_nieruchomosci <- agencja_nieruchomosci %>%
+  filter(
+    price >= 0,
+    bedrooms > 0,
+    bathrooms >0
+  )
 
 ```
 
 
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+## Badanie rozkładu cen względem metrażu nieruchomości
+
+W poniższej tabeli przedstawiono statystyki opisowe ceny w zależności od wielkości nieruchomości. Metraż nieruchomości w celach statystycznych podzielony został na 3 grupy- mały, średni oraz duży. Analiza obejmuje takie miary, jak średnia, mediana i wartość minimalna.
+
+```{r echo=FALSE}
+
+# Utworzenie przedziałów metrażowych
+breaks <- quantile(agencja_nieruchomosci$area, probs=seq(0,1, length.out=4), na.rm = TRUE)
+labels <- c("Małe", "Średnie", "Duże")
+agencja_nieruchomosci$area_group <- cut(agencja_nieruchomosci$area, breaks=breaks, labels=labels, include.lowest = TRUE)
+agencja_nieruchomosci <- agencja_nieruchomosci %>%
+  relocate(area_group, .after = area)
+
+# Agregacja danych dla ceny
+price_stats <- agencja_nieruchomosci %>%
+  group_by(area_group) %>%
+  summarise(
+    Liczba = n(),
+    Cena = mean(price, na.rm = TRUE),
+    Mediana = median(price, na.rm = TRUE),
+    Min = min(price, na.rm = TRUE),
+    Max = max(price, na.rm = TRUE)
+  ) %>%
+  ungroup() 
+
+# Agregacja danych dla ceny za m2
+price_per_sqft_stats <- agencja_nieruchomosci %>%
+  group_by(area_group) %>%
+  summarise(
+    Liczba = n(),
+    `Cena za m2` = mean(price_per_sqft, na.rm = TRUE),
+    `Mediana za m2` = median(price_per_sqft, na.rm = TRUE),
+    `Min za m2` = min(price_per_sqft, na.rm = TRUE),
+    `Max za m2` = max(price_per_sqft, na.rm = TRUE)
+  ) %>%
+  ungroup()
+
+kable(price_stats, format = "markdown", caption = "Średnie ceny w zależności od grup metrażowych")
+
+cat("\n")
+
+kable(price_per_sqft_stats, format = "markdown", caption = "Średnie ceny za metr kwadratowy w zależności od grup metrażowych")
+
+```
+
+Podsumowując powyższą tabelę, możemy zauważyć, że średnia cena za metr kwadratowy jest najwyższa dla małych nieruchomości i maleje wraz ze wzrostem metrażu. Może to sugerować, że mniejsze nieruchomości są wyceniane wyżej za jednostkę powierzchni, być może ze względu na większą dostępność lub preferencje rynkowe dotyczące mniejszych, bardziej przystępnych nieruchomości, albo z powodu lokalizacji w bardziej pożądanych obszarach. Ponad to, zakres cen (różnica między ceną maksymalną a minimalną) jest najszerszy w grupie nieruchomości dużych, co może wskazywać na większą różnorodność wartości w tej kategorii, być może ze względu na różnice w lokalizacji, standardzie, czy dodatkowych udogodnieniach.
+
+
+## Analiza ceny za metr kwadratowy w zależności o statusu umeblowania
+
+W poniższej tabeli przedstawiono statystyki opisowe ceny za metr kwadratowy w zależności od statusu umeblowania. Analiza obejmuje takie miary, jak średnia, mediana i wartość minimalna.
+
+
+```{r} 
+
+# Agregacja danych na podstawie statusu umeblowania
+price_per_sqft_stats_by_furnishing <- agencja_nieruchomosci %>%
+  group_by(furnishingstatus) %>%
+  summarise(
+    Liczba = n(),
+    `Cena za m2` = mean(price_per_sqft, na.rm = TRUE),
+    `Mediana za m2` = median(price_per_sqft, na.rm = TRUE),
+    `Min za m2` = min(price_per_sqft, na.rm = TRUE),
+    `Max za m2` = max(price_per_sqft, na.rm = TRUE)
+  ) %>%
+  ungroup()
+
+kable(price_per_sqft_stats_by_furnishing, format = "markdown", caption = "Średnie ceny za metr kwadratowy w zależności od statusu umeblowania")
+
+```
+
+Z analizy wynika, że status umeblowania ma znaczący wpływ na cenę za metr kwadratowy, przy czym nieruchomości umeblowane mają wyższą średnią i medianę cen, co sugeruje, że umeblowanie może być ważnym czynnikiem wpływającym na wartość nieruchomości.
