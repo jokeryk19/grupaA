@@ -35,30 +35,31 @@ Weryfikacja danych wykazała, że nasze zbiory są kompleksowe i nie zawierają 
 
 
 ```{r}
-#Statystki poszczególnych zmiennych
-summary(agencja_nieruchomosci)
+IQR_value <- IQR(agencja_nieruchomosci$price)
+upper_bound <- quantile(agencja_nieruchomosci$price, 0.75) + 3 * IQR_value
+lower_bound <- quantile(agencja_nieruchomosci$price, 0.25) - 3 * IQR_value
+boxplot(agencja_nieruchomosci$price, main = "Boxplot for the variable price", 
+        xlab = "Price", ylab = "Values", 
+        col = "cyan3", border = "darkslateblue", outline = TRUE, lwd = 1.2,
+        range = 3) 
+abline(h = upper_bound, col = "red", lty = 2)
+abline(h = lower_bound, col = "red", lty = 2)
 
 ```
-
+Wyniki powyższego wykresu ukazują, że większość cen nieruchomości mieści się w określonym przedziale, natomiastistnieją nieruchomości, których ceny są znacznie wyższe, co może wynikać z różnych czynników, takich jak lokalizacja, wielkość, cechy luksusowe itp.Z drugiej strony należy podkreślić, że cen skrajnie niskich, nielogicznych dla omawianej zmiennej nie odnotowano. W celu szerszej analizy zbadane zostały wartości zmiennych odstających o wysokich wartościach, by w 100% potwierdzić poprawność danych.
 
 ```{r}
-
-boxplot(agencja_nieruchomosci$price, main = "wykres pudełkowy dla zmiennej price", 
-        xlab = "price", ylab = "Wartości", 
-        col = "cyan3", border = "darkslateblue", outline = TRUE, lwd = 1.2)
-
+IQR_value <- IQR(agencja_nieruchomosci$price)
+upper_bound <- quantile(agencja_nieruchomosci$price, 0.75) + 1.5 * IQR_value
+lower_bound <- quantile(agencja_nieruchomosci$price, 0.25) - 1.5 * IQR_value
+outliers <- subset(agencja_nieruchomosci$price, agencja_nieruchomosci$price < lower_bound | agencja_nieruchomosci$price > upper_bound)
+print(outliers)
 ```
-Wyniki analizy statystycznej jasno wskazują, że nasze dane nie zawierają skrajnych ani nielogicznych wartości. Ten pozytywny wniosek pozwala nam na pewne podejście do dalszych analiz, mając pewność co do integralności naszych danych.
-
-```{r}
-plot(agencja_nieruchomosci$price, agencja_nieruchomosci$area,  type = "o", col = "cyan3",
-      main = "Wykres obserwacji dla zmiennej Cena",
-     xlab = "Obserwacja", ylab = "Cena"     )
-
-```
+Najwyższa odstająca wartość wynosi 1 330 000 jp. potwierdzając tym samym poprawność zmiennej. 
 
 
-##Wnioskowanie statystyczne
+
+#Wnioskowanie statystyczne
 
 ##Pytanie badawcze: Cena mieszkania uzależniona od ilości łazienem.
 
@@ -77,7 +78,22 @@ ggbetweenstats(
 # Wnioski: Wartość p-value wynosi ok. 0,00, czyli mniej niż standardowy poziom istotności 0,05. W takiej sytuacji mamy możliwość odrzucenia hipotezy zerowej, na rzecz hipotezy alternatywnej , sugerując tym samym, iż liczba łazienek wykazuje istotne statystycznie różnice w cenien mieszkania.
 
 
-##Pytanie badawcze: Cena przypadająca na jedną sypialnie uzależniona od ilości sypialnii
+#Pytanie badawcze: Cena za metr kwadratowy uzależniona od liczby pienter w domu
+
+**Hipoteza zerowa (H0):** Nie ma statystycznie istotnej różnicy w cenie za metr kwadratowy w zależniości od liczby pienter.
+
+**Hipoteza alternatywna (H1)**: Istnieje statystycznie istotna różnica w cenie metr kwadratowy w zależniości od liczby pienter.
+
+```{r echo=FALSE}
+ggbetweenstats(
+  data=agencja_nieruchomosci,
+  x=stories,
+  y=price_per_sqft
+)
+```
+# Wnioski: Wartość p-value wynosi 0,000, czyli znacznie mniej niż standardowy poziom istotności 0,05. W takiej sytuacji mamy możliwość odrzucenia hipotezy zerowej, na rzecz hipotezy alternatywnej , sugerując tym samym, iż cena za metr kwadratowy wykazuje istotne statystycznie różnice w zależniości od liczby pienter.
+
+#Pytanie badawcze: Cena przypadająca na jedną sypialnie uzależniona od ilości sypialnii
 
 **Hipoteza zerowa (H0):** Nie ma statystycznie istotnej różnicy w cenie przypadającej na jedną sypialnię w zależniości od liczby sypialnii.
 
@@ -92,7 +108,7 @@ ggbetweenstats(
 ```
 # Wnioski: Wartość p-value wynosi 0,01, czyli mniej niż standardowy poziom istotności 0,05. W takiej sytuacji mamy możliwość odrzucenia hipotezy zerowej, na rzecz hipotezy alternatywnej , sugerując tym samym, iż cena przypadająca na jedną sypialnie wykazuje istotne statystycznie różnice w zależniości od liczby sypialnii.
 
-##Pytanie badawcze: Cena za metr kwadratowy mieszkania uzależniona stanu wyposażenia
+#Pytanie badawcze: Cena za metr kwadratowy mieszkania uzależniona stanu wyposażenia
 
 **Hipoteza zerowa (H0):** Srednia cena za metr kwadratowy jest taka sama dla wszystkich stanów wyposażenia.
 
@@ -106,7 +122,7 @@ summary(anova1)
 # Wnioski: Test ANOVA wartość p-value równą 0,00007, czyli mniej niż standardowy poziom istotności 0,05.W takiej sytuacji mamy możliwość odrzucenia hipotezy zerowej, na rzecz hipotezy alternatywnej , sugerując tym samym, iż stan wyposażenia istotnie wpływa na cenę za metr kwadratowy.
 
 
-#Pytanie badawcze: Liczba miejsc parkingowych dostępnych w budynku uzależniona jest od wielkości mieszkania
+#Pytanie badawcze: Liczba miejsc parkingowych dostępnych w budynku uzależniony od wielkości mieszkania
 
 **Hipoteza zerowa (H0):** Nie ma statystycznie istotnej różnicy w liczbie miejsc parkingowych dostępnych w budynku w zależniości od wielkości mieszkania.
 
