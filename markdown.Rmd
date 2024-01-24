@@ -108,8 +108,21 @@ ggbetweenstats(
 # Wnioski: Wartość p-value wynosi ok. 0,000047, czyli znacznie mniej niż standardowy poziom istotności 0,05. W takiej sytuacji mamy możliwość odrzucenia hipotezy zerowej, na rzecz hipotezy alternatywnej , sugerując tym samym, iż stan wyposażenia mieszkania wykazuje istotne statystycznie różnice w cenien za metr kwadratowy mieszkania.
 
 
+#Pytanie badawcze: Liczba miejsc parkingowych dostępnych w budynku uzależniona jest od wielkości mieszkania
 
+**Hipoteza zerowa (H0):** Nie ma statystycznie istotnej różnicy w liczbie miejsc parkingowych dostępnych w budynku w zależniości od wielkości mieszkania.
 
+**Hipoteza alternatywna (H1)**: Istnieje statystycznie istotna różnica w liczbie miejsc parkingowych dostępnych w budynku
+
+```{r echo=FALSE}
+ggbetweenstats(
+  data=agencja_nieruchomosci,
+  x=area_group,
+  y=parking
+)
+```
+
+# Wnioski: Wartość p-value wynosi ok. 0,000, czyli znacznie mniej niż standardowy poziom istotności 0,05. W takiej sytuacji mamy możliwość odrzucenia hipotezy zerowej, na rzecz hipotezy alternatywnej , sugerując tym samym, iż liczba miejsc parkingowych dostępnych w budynku wykazuje istotne statystycznie różnice w wielkości mieszkania
 
 
 
