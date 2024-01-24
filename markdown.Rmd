@@ -14,6 +14,8 @@ library(magrittr)   # pakiet do fajek
 library(lubridate)  # pakiet do operacji na datach
 library(dplyr)
 library(knitr)
+library(ggplot2)
+library(reshape2)
 
 
 agencja_nieruchomosci <- read_csv("agencja_nieruchomosci.csv")
@@ -29,15 +31,26 @@ Projekt z przedmiotu "analiza danych" będzie koncentrował się na kompleksowej
 ## Weryfikacja danych
 
 ```{r}
-attach(agencja_nieruchomosci)
+
+# Obliczenie brakujących danych
 braki_danych <- colSums(is.na(agencja_nieruchomosci))
-braki_danych
+
+# Tworzenie ramki danych do wyświetlenia
+braki_danych_df <- data.frame(Zmienna = names(braki_danych), Liczba_brakow_danych = braki_danych)
+
+# Użycie kable() do wygenerowania ładnej tabeli
+knitr::kable(braki_danych_df, caption = "Analiza braków danych w zbiorze agencja_nieruchomosci", 
+             col.names = c("Zmienna", "Liczba braków danych"))
+
 
 ```
 
 Weryfikacja danych wykazała, że nasze zbiory są kompleksowe i nie zawierają żadnych braków danych. Ta sytuacja umożliwia nam pełne skorzystanie z dostępnych danych do przeprowadzenia analizy i uzyskania wiarygodnych wyników.
 
-```{r}
+W ramach wstępnego przetwarzania danych dokonano kilku kluczowych transformacji w celu przygotowania zestawu danych do analizy. Pierwszym krokiem było przeliczenie powierzchni nieruchomości z jednostek stóp kwadratowych na metry kwadratowe, aby dostosować dane do standardów międzynarodowych. Następnie obliczono cenę za metr kwadratowy oraz cenę za każdą sypialnię, co pozwoliło na głębsze zrozumienie struktury cen w kontekście rozmiaru i ilości pomieszczeń. Dodatkowo dane zostały zaokrąglone do dwóch miejsc po przecinku dla większej precyzji i czytelności. Na koniec wprowadzono ograniczenia dla zmiennych, aby upewnić się, że analizowane będą tylko te rekordy, które mają określone wartości dla cen, liczby sypialni i łazienek. Te kroki pozwoliły na ustrukturyzowanie i oczyszczenie danych przed przystąpieniem do właściwej analizy.
+
+
+```{r echo=FALSE}
 #Zmiana stóp kwadratowych na metry kwadratowe. 1 stopa kwadratowa to 0.092903 metra kwadratowego
 
 agencja_nieruchomosci <- agencja_nieruchomosci %>%
@@ -125,7 +138,7 @@ Podsumowując powyższą tabelę, możemy zauważyć, że średnia cena za metr 
 W poniższej tabeli przedstawiono statystyki opisowe ceny za metr kwadratowy w zależności od statusu umeblowania. Analiza obejmuje takie miary, jak średnia, mediana i wartość minimalna.
 
 
-```{r} 
+```{r echo=FALSE} 
 
 # Agregacja danych na podstawie statusu umeblowania
 price_per_sqft_stats_by_furnishing <- agencja_nieruchomosci %>%
@@ -144,3 +157,50 @@ kable(price_per_sqft_stats_by_furnishing, format = "markdown", caption = "Średn
 ```
 
 Z analizy wynika, że status umeblowania ma znaczący wpływ na cenę za metr kwadratowy, przy czym nieruchomości umeblowane mają wyższą średnią i medianę cen, co sugeruje, że umeblowanie może być ważnym czynnikiem wpływającym na wartość nieruchomości.
+
+## Analiza korelacji
+W poniższej analizie przeprowadzono badanie korelacji między kluczowymi zmiennymi numerycznymi w zestawie danych agencji nieruchomości. Przedstawiona mapa ciepła przedstawia wyniki obliczeń współczynników korelacji Pearsona, które mogą przyjmować wartości od -1 do 1. 
+
+```{r echo=FALSE}
+
+numeryczne_zmienne <- agencja_nieruchomosci %>% 
+  select(price_per_sqft, area, bedrooms, bathrooms, stories, parking)
+
+korelacja <- cor(numeryczne_zmienne, use = "complete.obs")
+
+korelacja_melted <- melt(korelacja)
+
+ggplot(data = korelacja_melted, aes(x=Var1, y=Var2, fill=value)) +
+  geom_tile() +
+  scale_fill_gradient2(low = "blue", high = "red", mid = "white", 
+                       midpoint = 0, limit = c(-1,1), space = "Lab", 
+                       name="Korelacja") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1)) +
+  labs(x='', y='', title='Mapa ciepła korelacji między zmiennymi')
+
+```
+
+Mapa ciepła korelacji pokazuje różne stopnie skojarzeń między parametrami nieruchomości. Widoczne są następujące tendencje: 
+
+- **Cena za metr kwadratowy (`price_per_sqft`)**:
+  - Wykazuje umiarkowaną ujemną korelację z powierzchnią (`area`), co może sugerować, że większe nieruchomości mają niższą cenę za metr kwadratowy.
+  - Ma niewielką dodatnią korelację z liczbą sypialni (`bedrooms`), łazienek (`bathrooms`) oraz liczby pięter (`stories`), co wskazuje, że zwiększenie liczby tych elementów może wiązać się z niewielkim wzrostem ceny za metr kwadratowy.
+  - Praktycznie brak korelacji z liczbą miejsc parkingowych (`parking`), co sugeruje, że ta cecha ma niewielki lub żaden wpływ na cenę za metr kwadratowy.
+
+- **Powierzchnia (`area`)**:
+  - Umiarkowana dodatnia korelacja z miejscami parkingowymi (`parking`) oznacza, że większe nieruchomości częściej oferują więcej miejsc parkingowych.
+  - Niska dodatnia korelacja z liczbą sypialni (`bedrooms`) i łazienek (`bathrooms`) może wskazywać na to, że choć ogólnie większa powierzchnia wiąże się z większą liczbą sypialni i łazienek, wzrost ten nie jest proporcjonalny.
+
+- **Sypialnie (`bedrooms`)**:
+  - Umiarkowana korelacja z łazienkami (`bathrooms`) i liczba pięter (`stories`) sugeruje, że zwiększenie liczby sypialni często wiąże się ze wzrostem liczby łazienek oraz większą liczbą pięter w nieruchomości.
+  - Słaba korelacja z miejscami parkingowymi (`parking`) oznacza, że liczba sypialni nie jest silnie powiązana z dostępnymi miejscami parkingowymi.
+
+- **Łazienki (`bathrooms`)**:
+  - Podobnie jak sypialnie, łazienki mają umiarkowaną korelację z liczbą pięter (`stories`), co sugeruje, że w domach wielopoziomowych jest zazwyczaj więcej łazienek.
+
+- **Liczba pięter (`stories`)**:
+  - Wykazuje niewielką korelację z powierzchnią (`area`) i miejscami parkingowymi (`parking`), co może wskazywać, że cechy te nie zależą bezpośrednio od liczby pięter w budynku.
+
+- **Miejsca parkingowe (`parking`)**:
+  - Silniejsza korelacja z powierzchnią (`area`) niż z innymi zmiennymi może oznaczać, że większe nieruchomości zazwyczaj oferują więcej miejsc parkingowych.
