@@ -46,6 +46,7 @@ getwd()
 
 ```
 
+## Sprawdzenie brakujących danych
 ```{r}
 attach(agencja_nieruchomosci)
 braki_danych <- colSums(is.na(agencja_nieruchomosci))
@@ -61,82 +62,54 @@ agencja_nieruchomosci <- agencja_nieruchomosci %>%
   mutate(Cena_za_m2=price/area_m2) %>%
   relocate(Cena_za_m2, .after = price)
 ```
+Analizowane dane nie posiadają braków danych
 
-
-```{r}
-#Statystki poszczególnych zmiennych
-summary(agencja_nieruchomosci)
-
-```
-
-
-```{r}
-
-boxplot(agencja_nieruchomosci$price, main = "wykres pudełkowy dla zmiennej price", 
-        xlab = "price", ylab = "Wartości", 
-        col = "cyan3", border = "darkslateblue", outline = TRUE, lwd = 1.2)
-#Wyniki analizy statystycznej jasno wskazują, że nasze dane nie zawierają skrajnych ani nielogicznych wartości. Ten pozytywny wniosek pozwala nam na pewne podejście do dalszych analiz, mając pewność co do integralności naszych danych.
-
-```
-
-```{r}
-plot(agencja_nieruchomosci$price, agencja_nieruchomosci$area_m2,  type = "o", col = "cyan3",
-      main = "Wykres obserwacji dla zmiennej Cena",
-     xlab = "Obserwacja", ylab = "Cena"     )
-
-```
-```{r}
-ggplot(agencja_nieruchomosci, aes(x=price, y=after_stat(density))) + geom_histogram(fill= "darkslateblue", bins=30, color="cyan3") + geom_density(color="red", size=1)
-
-ggplot(agencja_nieruchomosci, aes(x=Cena_za_m2, y=after_stat(density))) + geom_histogram(fill= "darkslateblue", bins=30, color="cyan3") + geom_density(color="red", size=1)
-
+##Analiza danych
 #Pokazanie rozkładu cen mieszkań oraz ceny za m2 na histogramie wraz z linią gęstości. 
+
+```{r}
+ggplot(agencja_nieruchomosci, aes(x=Cena_za_m2, y=after_stat(density))) + geom_histogram(fill= "darkslateblue", bins=30, color="cyan3") + geom_density(color="red", size=1)
 ```
+Na przedstawionym histogramie obserwujemy rozkład ceny za metr kwadratowy nieruchomości, który wykazuje prawoskrzywioną asymetrię. Większość cen mieszkań koncentruje się w niższych przedziałach cenowych, co wskazuje na to, że są to wartości najbardziej typowe dla analizowanego rynku. Jednak długi prawy "ogon" dystrybucji sugeruje obecność nieruchomości o znacznie wyższej cenie za metr kwadratowy, co może świadczyć o istnieniu segmentu luksusowych nieruchomości. Wygładzona krzywa gęstości nałożona na histogram dodatkowo potwierdza ten wniosek, ukazując kontur ogólnej tendencji w rozkładzie danych.
+
+#Ilustracja rozkładu ceny nieruchomości na podstawie jej powierzchni, na wykresie mamy także podział na ilość pokojów. To wszystko mamy na zlogarytmowanej skali.
 ```{r}
 ggplot(agencja_nieruchomosci, aes(x=price, y=area_m2, color=bedrooms)) + geom_point() + scale_x_log10() + scale_y_log10() + theme_classic()
-#Ilustracja rozkładu ceny nieruchomości na podstawie jej powierzchni, na wykresie mamy także podział na ilość pokojów. To wszystko mamy na zlogarytmowanej skali.
 ```
 
+Na podstawie przedstawionego wykresu rozrzutu, który ilustruje zależność między ceną nieruchomości, a jej powierzchnią z uwzględnieniem liczby sypialni, można wysnuć kilka wniosków:
+* Wydaje się, że istnieje zróżnicowanie cen nieruchomości, które nie jest jednoznacznie zależne od ich powierzchni, co wskazuje na istnienie innych czynników wpływających na cenę, takich jak lokalizacja, standard wykończenia, czy dodatkowe udogodnienia. * * Rozkład punktów nie pokazuje wyraźnego trendu liniowego, co może sugerować, że związek między ceną a powierzchnią nie jest prosty lub jest modyfikowany przez inne zmienne, jak liczba sypialni. 
+
+
+#Zilustrowanie na wykresach box plot zależności rozkładu ceny od wybranej zmiennej
 ```{r}
 ggplot(agencja_nieruchomosci, aes(price)) + geom_boxplot(aes(fill=factor(bedrooms))) + facet_wrap(bedrooms) +   labs(title="Rozkład cen nieruchomości w zależności od liczby sypialni")
 
 ggplot(agencja_nieruchomosci, aes(price)) + geom_boxplot(aes(fill=factor(bathrooms))) + facet_wrap(bathrooms) +   labs(title="Rozkład cen nieruchomości w zależności od liczby łazienek")
 
 ggplot(agencja_nieruchomosci, aes(price)) + geom_boxplot(aes(fill=factor(stories))) + facet_wrap(stories) +   labs(title="Rozkład cen nieruchomości w zależności od liczby pięter")
-
-#Zilustrowanie na wykresach box plot zależności rozkładu ceny od wybranej zmiennej
 ```
+Cena względem liczby sypialni
+Wyraźnie widać, że mediana cen oraz rozkład cenowy różni się w zależności od liczby sypialni, co sugeruje, że liczba sypialni może wpływać na cenę nieruchomości. Nieruchomości z większą liczbą sypialni wydają się mieć wyższą medianę cen, jednak obecność punktów odstających, szczególnie dla nieruchomości z mniejszą liczbą sypialni, wskazuje na to, że są inne czynniki, które również mogą znacząco wpływać na cenę. Ponadto, zróżnicowanie cenowe w obrębie każdej kategorii jest dość duże, co może świadczyć o heterogeniczności nieruchomości nawet przy tej samej liczbie sypialni.
 
+
+Cena względem liczby łazienek
+Nieruchomości z jedną łazienką wykazują węższy zakres cen i niższą medianę w porównaniu z nieruchomościami posiadającymi większą liczbę łazienek. Mediana cenowa oraz rozstęp cen rosną wraz z liczbą łazienek, co sugeruje, że większa liczba łazienek może być związana z wyższą ceną nieruchomości. Obecność punktów odstających dla nieruchomości z jedną i dwoma łazienkami wskazuje na istnienie nieruchomości o cenach znacznie odbiegających od typowych wartości w tych kategoriach. Nieruchomości z trzema łazienkami mają szeroki zakres cen, podczas gdy dane dla nieruchomości z czterema łazienkami są zbyt ograniczone, aby wysnuć jednoznaczne wnioski.
+
+
+Cena względem liczby pięter
+Mediana cen, która jest reprezentowana przez poziomą linię wewnątrz każdego pudełka, oraz zakres cen, wydają się być różne dla różnej liczby pięter. Wykres sugeruje, że nieruchomości z większą liczbą pięter mogą mieć tendencję do wyższych cen, jednak występowanie punktów odstających w każdej kategorii wskazuje, że istnieją wyjątki od tej tendencji. Ogólnie wykres może wskazywać, że liczba pięter ma wpływ na cenę nieruchomości, ale potrzebna jest dalsza analiza, aby zrozumieć ten związek dokładniej.
+
+#Rozkład willi na wykresie ceny i ceny za m2 przy najtańszej willi (powierzchnia powyżej 1000m2) i w preferowanej okolicy
 ```{r}
 willa <- agencja_nieruchomosci %>%
   filter(area_m2 >=1000, prefarea=="yes")
-#Wyszukanie najtańszej willi (powierzchnia powyżej 1000m2 i w preferowanej okolicy)
-
 ggplot(willa, aes(x=price, y=Cena_za_m2)) + geom_point(size=3, color="cyan3")
-
-#Rozkład willi na wykresie ceny i ceny za m2
-  
 ```
+Wykres rozrzutu przedstawia zależność między ceną nieruchomości a ceną za metr kwadratowy. Punkty na wykresie reprezentują poszczególne nieruchomości, z ceną na osi x i ceną za metr kwadratowy na osi y. 
+
 
 ```{r}
 ggplot(agencja_nieruchomosci, aes(x=price, y=area_m2, color=furnishingstatus)) + geom_point() + facet_wrap(parking) + labs(title="Rozkład cen nieruchomości w zależności od powierzchni z podziałem na ilość miejsc parkingowych i rozróżnieniem na status umeblowania")
-
-  
 ```
-
-```{r}
-## Pytania badawcze, hipotezy
-# Cena mieszkania jest uzależniona od jego powierzchnii
-# Cena za m2 uzależniona od preferowanej lokalizacji/umeblowania
-# Cena mieszkania uzależniona od ilości sypilani/łazienek/pokoi gościnnych
-
-# ggbetweenstats(data=dane, x=jakościowy, y=ilosciowy)
-# ggpiestats -> ggbarstats (x=ryzyko, y=wyksztalcenie, data=dane)
-
-install.packages("ggstatsplot")
-library(ggstatsplot)
-ggbetweenstats(data=agencja_nieruchomosci, x= furnishingstatus, y=area_m2)
-install.packages("rstantools")
-library(rstantools)
-
-```
+Możemy zaobserwować, że nie ma jednoznacznej zależności między ceną a powierzchnią nieruchomości, które różnią się statusem umeblowania. Co więcej, rozkład cenowy wydaje się być dość podobny dla różnych ilości miejsc parkingowych, choć wykres sugeruje, że nieruchomości z większą ilością miejsc parkingowych mogą być nieco droższe. Odmienne kolory punktów dla różnych statusów umeblowania nie wykazują wyraźnego wzorca, co sugeruje, że status umeblowania nie jest głównym czynnikiem wpływającym na cenę nieruchomości w obrębie danej ilości miejsc parkingowych.
