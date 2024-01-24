@@ -75,5 +75,23 @@ ggbetweenstats(
 # Wnioski: Wartość p-value wynosi ok. 0,00132, czyli mniej niż standardowy poziom istotności 0,05. W takiej sytuacji mamy możliwość odrzucenia hipotezy zerowej, na rzecz hipotezy alternatywnej , sugerując tym samym, iż liczba sypialni wykazuje istotne statystycznie różnice w cenien mieszkania.
 
 
-#
+#Pytanie badawcze: Cena za metr kwadratowy mieszkania uzależniona od jego powierzchni
+
+**Hipoteza zerowa (H0):** Nie ma statystycznie istotnej różnicy w cenie za metr kwadratowy mieszkania w zależniości od jego powierzchni.
+
+**Hipoteza alternatywna (H1)**: Istnieje statystycznie istotna różnica w cenie za metr kwadratowy mieszkania w zależniości od jego powierzchni.
+
+```{r echo=FALSE}
+ggbetweenstats(
+  data=agencja_nieruchomosci,
+  x=area,
+  y=price_per_sqft
+)
+```
+# Wnioski: Wartość p-value wynosi ok. 0,00306, czyli mniej niż standardowy poziom istotności 0,05. W takiej sytuacji mamy możliwość odrzucenia hipotezy zerowej, na rzecz hipotezy alternatywnej , sugerując tym samym, iż powierzchnia mieszkania wykazuje istotne statystycznie różnice w cenien za metr kwadratowy mieszkania.
+
+
+
+
+
 
