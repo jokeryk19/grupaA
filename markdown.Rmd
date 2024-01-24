@@ -91,6 +91,30 @@ ggbetweenstats(
 # Wnioski: Wartość p-value wynosi ok. 0,00306, czyli mniej niż standardowy poziom istotności 0,05. W takiej sytuacji mamy możliwość odrzucenia hipotezy zerowej, na rzecz hipotezy alternatywnej , sugerując tym samym, iż powierzchnia mieszkania wykazuje istotne statystycznie różnice w cenien za metr kwadratowy mieszkania.
 
 
+#Pytanie badawcze: Cena za metr kwadratowy mieszkania uzależniona stanu wyposażenia
+
+**Hipoteza zerowa (H0):** Nie ma statystycznie istotnej różnicy w cenie za metr kwadratowy mieszkania w zależniości od jego stanu wyposażenia.
+
+**Hipoteza alternatywna (H1)**: Istnieje statystycznie istotna różnica w cenie za metr kwadratowy mieszkania w zależniości od jego stanu wyposażenia.
+
+```{r echo=FALSE}
+ggbetweenstats(
+  data=agencja_nieruchomosci,
+  x=furnishingstatus,
+  y=price_per_sqft
+)
+```
+
+# Wnioski: Wartość p-value wynosi ok. 0,000047, czyli znacznie mniej niż standardowy poziom istotności 0,05. W takiej sytuacji mamy możliwość odrzucenia hipotezy zerowej, na rzecz hipotezy alternatywnej , sugerując tym samym, iż stan wyposażenia mieszkania wykazuje istotne statystycznie różnice w cenien za metr kwadratowy mieszkania.
+
+
+
+
+
+
+
+
+
 
 
 
