@@ -16,54 +16,236 @@ library(lubridate)  # pakiet do operacji na datach
 install.packages("dplyr")
 library(dplyr)
 library(tidyr)
-library(naniar)
-library(visdat)
-library(dlookr)
+
 library(ggplot2)
-library(rmdformats)
-library(validate)
-library(validatetools)
-library(dcmodify)
-library(errorlocate)
-library(deductive)
-library(VIM)
-library(simputation)
-library(lumberjack)
-library(ISLR) 
-library(dlookr)
-library(xts)
-library(quantmod)
-library(ROCR)
-library(Information)
-library(scorecard)
-library(readr)
+
 install.packages("rstantools")
 library(rstantools)
 install.packages("ggstatsplot")
 library(ggstatsplot)
+
+library(reshape2)
+library(knitr)
+
 
 agencja_nieruchomosci <- read_csv("agencja_nieruchomosci.csv")
 View(agencja_nieruchomosci)
 getwd()
 ```
 
-```{r}
-### Wprowadzenie do projektu
-#Projekt z przedmiotu "analiza danych" będzie koncentrował się na kompleksowej analizie danych z agencji nieruchomości. Będziemy pracować na zestawie danych zawierającym 13 kluczowych zmiennych, w tym cenę nieruchomości, powierzchnię, liczbę sypialni i łazienek, liczbę pięter, dostępność połączenia z główną drogą, obecność pokoju gościnnego, piwnicy, systemu ogrzewania wody, klimatyzacji, liczby miejsc parkingowych, lokalizacji w preferowanym obszarze oraz statusu umeblowania. Naszym celem będzie czyszczenie, przygotowanie i poddanie analizie tych danych do dalszych badań, aby lepiej zrozumieć trendy i wzorce w branży nieruchomości.
+
+## Weryfikacja danych
+
+```{r echo=FALSE}
+
+braki_danych <- colSums(is.na(agencja_nieruchomosci))
+
+
+polskie_nazwy <- c("price" = "Cena", "price_per_sqft" = "Cena za metr kwadratowy",
+                  "price_per_bedroom" = "Cena za sypialnię", "area" = "Powierzchnia", "bedrooms" = "Sypialnie",
+                  "bathrooms" = "Łazienki", "stories" = "Piętra", "mainroad" = "Główna droga",
+                  "guestroom" = "Pokój gościnny", "basement" = "Piwnica",
+                  "hotwaterheating" = "Ogrzewanie wody", "airconditioning" = "Klimatyzacja",
+                  "parking" = "Parking", "prefarea" = "Preferowana okolica",
+                  "furnishingstatus" = "Stan umeblowania")
+
+braki_danych_df <- data.frame(Zmienna = polskie_nazwy[names(braki_danych)], 
+                              Liczba_brakow_danych = braki_danych)
+
+# Użycie kable() do wygenerowania ładnej tabeli
+knitr::kable(braki_danych_df, caption = "Analiza braków danych w zbiorze agencja_nieruchomosci", 
+             col.names = c("Zmienna", "Liczba braków danych"))
+```
+
+Weryfikacja danych wykazała, że nasze zbiory są kompleksowe i nie zawierają żadnych braków danych. Ta sytuacja umożliwia nam pełne skorzystanie z dostępnych danych do przeprowadzenia analizy i uzyskania wiarygodnych wyników.
+
+W ramach wstępnego przetwarzania danych dokonano kilku kluczowych transformacji w celu przygotowania zestawu danych do analizy. Pierwszym krokiem było przeliczenie powierzchni nieruchomości z jednostek stóp kwadratowych na metry kwadratowe, aby dostosować dane do standardów międzynarodowych. Następnie obliczono cenę za metr kwadratowy oraz cenę za każdą sypialnię, co pozwoliło na głębsze zrozumienie struktury cen w kontekście rozmiaru i ilości pomieszczeń. Dodatkowo dane zostały zaokrąglone do dwóch miejsc po przecinku dla większej precyzji i czytelności. Na koniec wprowadzono ograniczenia dla zmiennych, aby upewnić się, że analizowane będą tylko te rekordy, które mają określone wartości dla cen, liczby sypialni i łazienek. Te kroki pozwoliły na ustrukturyzowanie i oczyszczenie danych przed przystąpieniem do właściwej analizy.
+
+
+```{r echo=FALSE}
+#Zmiana stóp kwadratowych na metry kwadratowe. 1 stopa kwadratowa to 0.092903 metra kwadratowego
+
+agencja_nieruchomosci <- agencja_nieruchomosci %>%
+  mutate(area = area*0.092903)
+
+#Cena za metr kwadratowy oraz cena za ilość pokoi
+
+agencja_nieruchomosci$price_per_sqft <- agencja_nieruchomosci$price / agencja_nieruchomosci$area
+  agencja_nieruchomosci <- agencja_nieruchomosci %>%
+    relocate(price_per_sqft, .after= price)
+  
+agencja_nieruchomosci$price_per_bedroom <- agencja_nieruchomosci$price / agencja_nieruchomosci$bedrooms 
+  agencja_nieruchomosci <- agencja_nieruchomosci %>%
+  relocate(price_per_bedroom, .after = price_per_sqft)
+
+# Zaokrąglanie do dwóch miejsc po przecinku w kolumnie price_per_sqft
+
+agencja_nieruchomosci <- agencja_nieruchomosci %>%
+  mutate(area = round(area,2),
+    price_per_sqft = round(price_per_sqft,2))
+
+#Ograniczenia zmiennych
+
+agencja_nieruchomosci <- agencja_nieruchomosci %>%
+  filter(
+    price >= 0,
+    bedrooms > 0,
+    bathrooms >0
+  )
 
 ```
 
-```{r}
+
+
+## Badanie rozkładu cen względem metrażu nieruchomości
+
+W poniższej tabeli przedstawiono statystyki opisowe ceny w zależności od wielkości nieruchomości. Metraż nieruchomości w celach statystycznych podzielony został na 3 grupy- mały, średni oraz duży. Analiza obejmuje takie miary, jak średnia, mediana i wartość minimalna.
+
+```{r echo=FALSE}
+
+# Utworzenie przedziałów metrażowych
+breaks <- quantile(agencja_nieruchomosci$area, probs=seq(0,1, length.out=4), na.rm = TRUE)
+labels <- c("Małe", "Średnie", "Duże")
+agencja_nieruchomosci$area_group <- cut(agencja_nieruchomosci$area, breaks=breaks, labels=labels, include.lowest = TRUE)
+agencja_nieruchomosci <- agencja_nieruchomosci %>%
+  relocate(area_group, .after = area)
+
+# Agregacja danych dla ceny
+price_stats <- agencja_nieruchomosci %>%
+  group_by(area_group) %>%
+  summarise(
+    Liczba = n(),
+    Cena = mean(price, na.rm = TRUE),
+    Mediana = median(price, na.rm = TRUE),
+    Min = min(price, na.rm = TRUE),
+    Max = max(price, na.rm = TRUE)
+  ) %>%
+  ungroup() 
+
+# Agregacja danych dla ceny za m2
+price_per_sqft_stats <- agencja_nieruchomosci %>%
+  group_by(area_group) %>%
+  summarise(
+    Liczba = n(),
+    `Cena za m2` = mean(price_per_sqft, na.rm = TRUE),
+    `Mediana za m2` = median(price_per_sqft, na.rm = TRUE),
+    `Min za m2` = min(price_per_sqft, na.rm = TRUE),
+    `Max za m2` = max(price_per_sqft, na.rm = TRUE)
+  ) %>%
+  ungroup()
+
+kable(price_stats, format = "markdown", caption = "Średnie ceny w zależności od grup metrażowych")
+
+cat("\n")
+
+kable(price_per_sqft_stats, format = "markdown", caption = "Średnie ceny za metr kwadratowy w zależności od grup metrażowych")
+
+```
+
+Podsumowując powyższą tabelę, możemy zauważyć, że średnia cena za metr kwadratowy jest najwyższa dla małych nieruchomości i maleje wraz ze wzrostem metrażu. Może to sugerować, że mniejsze nieruchomości są wyceniane wyżej za jednostkę powierzchni, być może ze względu na większą dostępność lub preferencje rynkowe dotyczące mniejszych, bardziej przystępnych nieruchomości, albo z powodu lokalizacji w bardziej pożądanych obszarach. Ponad to, zakres cen (różnica między ceną maksymalną a minimalną) jest najszerszy w grupie nieruchomości dużych, co może wskazywać na większą różnorodność wartości w tej kategorii, być może ze względu na różnice w lokalizacji, standardzie, czy dodatkowych udogodnieniach.
+
+
+## Analiza ceny za metr kwadratowy w zależności o statusu umeblowania
+
+W poniższej tabeli przedstawiono statystyki opisowe ceny za metr kwadratowy w zależności od statusu umeblowania. Analiza obejmuje takie miary, jak średnia, mediana i wartość minimalna.
+
+
+```{r echo=FALSE} 
+
+# Agregacja danych na podstawie statusu umeblowania
+price_per_sqft_stats_by_furnishing <- agencja_nieruchomosci %>%
+  group_by(furnishingstatus) %>%
+  summarise(
+    Liczba = n(),
+    `Cena za m2` = mean(price_per_sqft, na.rm = TRUE),
+    `Mediana za m2` = median(price_per_sqft, na.rm = TRUE),
+    `Min za m2` = min(price_per_sqft, na.rm = TRUE),
+    `Max za m2` = max(price_per_sqft, na.rm = TRUE)
+  ) %>%
+  ungroup()
+
+kable(price_per_sqft_stats_by_furnishing, format = "markdown", caption = "Średnie ceny za metr kwadratowy w zależności od statusu umeblowania")
+
+```
+
+Z analizy wynika, że status umeblowania ma znaczący wpływ na cenę za metr kwadratowy, przy czym nieruchomości umeblowane mają wyższą średnią i medianę cen, co sugeruje, że umeblowanie może być ważnym czynnikiem wpływającym na wartość nieruchomości.
+
+## Analiza korelacji
+W poniższej analizie przeprowadzono badanie korelacji między kluczowymi zmiennymi numerycznymi w zestawie danych agencji nieruchomości. Przedstawiona mapa ciepła przedstawia wyniki obliczeń współczynników korelacji Pearsona, które mogą przyjmować wartości od -1 do 1. 
+
+```{r echo=FALSE}
+
+numeryczne_zmienne <- agencja_nieruchomosci %>% 
+  select(price_per_sqft, area, bedrooms, bathrooms, stories, parking)
+
+korelacja <- cor(numeryczne_zmienne, use = "complete.obs")
+
+korelacja_melted <- melt(korelacja)
+
+ggplot(data = korelacja_melted, aes(x=Var1, y=Var2, fill=value)) +
+  geom_tile() +
+  scale_fill_gradient2(low = "blue", high = "red", mid = "white", 
+                       midpoint = 0, limit = c(-1,1), space = "Lab", 
+                       name="Korelacja") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1)) +
+  labs(x='', y='', title='Mapa ciepła korelacji między zmiennymi')
+
+```
+
+Mapa ciepła korelacji pokazuje różne stopnie skojarzeń między parametrami nieruchomości. Widoczne są następujące tendencje: 
+
+- **Cena za metr kwadratowy (`price_per_sqft`)**:
+  - Wykazuje umiarkowaną ujemną korelację z powierzchnią (`area`), co może sugerować, że większe nieruchomości mają niższą cenę za metr kwadratowy.
+  - Ma niewielką dodatnią korelację z liczbą sypialni (`bedrooms`), łazienek (`bathrooms`) oraz liczby pięter (`stories`), co wskazuje, że zwiększenie liczby tych elementów może wiązać się z niewielkim wzrostem ceny za metr kwadratowy.
+  - Praktycznie brak korelacji z liczbą miejsc parkingowych (`parking`), co sugeruje, że ta cecha ma niewielki lub żaden wpływ na cenę za metr kwadratowy.
+
+- **Powierzchnia (`area`)**:
+  - Umiarkowana dodatnia korelacja z miejscami parkingowymi (`parking`) oznacza, że większe nieruchomości częściej oferują więcej miejsc parkingowych.
+  - Niska dodatnia korelacja z liczbą sypialni (`bedrooms`) i łazienek (`bathrooms`) może wskazywać na to, że choć ogólnie większa powierzchnia wiąże się z większą liczbą sypialni i łazienek, wzrost ten nie jest proporcjonalny.
+
+- **Sypialnie (`bedrooms`)**:
+  - Umiarkowana korelacja z łazienkami (`bathrooms`) i liczba pięter (`stories`) sugeruje, że zwiększenie liczby sypialni często wiąże się ze wzrostem liczby łazienek oraz większą liczbą pięter w nieruchomości.
+  - Słaba korelacja z miejscami parkingowymi (`parking`) oznacza, że liczba sypialni nie jest silnie powiązana z dostępnymi miejscami parkingowymi.
+
+- **Łazienki (`bathrooms`)**:
+  - Podobnie jak sypialnie, łazienki mają umiarkowaną korelację z liczbą pięter (`stories`), co sugeruje, że w domach wielopoziomowych jest zazwyczaj więcej łazienek.
+
+- **Liczba pięter (`stories`)**:
+  - Wykazuje niewielką korelację z powierzchnią (`area`) i miejscami parkingowymi (`parking`), co może wskazywać, że cechy te nie zależą bezpośrednio od liczby pięter w budynku.
+
+- **Miejsca parkingowe (`parking`)**:
+  - Silniejsza korelacja z powierzchnią (`area`) niż z innymi zmiennymi może oznaczać, że większe nieruchomości zazwyczaj oferują więcej miejsc parkingowych.
+message.txt
+12 KB
+
+
+
+
+
+
+
+
+
+## Wprowadzenie do projektu
+
+#Projekt z przedmiotu "analiza danych" będzie koncentrował się na kompleksowej analizie danych z agencji nieruchomości. Będziemy pracować na zestawie danych zawierającym 13 kluczowych zmiennych, w tym cenę nieruchomości, powierzchnię, liczbę sypialni i łazienek, liczbę pięter, dostępność połączenia z główną drogą, obecność pokoju gościnnego, piwnicy, systemu ogrzewania wody, klimatyzacji, liczby miejsc parkingowych, lokalizacji w preferowanym obszarze oraz statusu umeblowania. Naszym celem będzie czyszczenie, przygotowanie i poddanie analizie tych danych do dalszych badań, aby lepiej zrozumieć trendy i wzorce w branży nieruchomości.
+
+
+```{r setup, include=FALSE}
 attach(agencja_nieruchomosci)
 braki_danych <- colSums(is.na(agencja_nieruchomosci))
 braki_danych
+```
 #Weryfikacja danych wykazała, że nasze zbiory są kompleksowe i nie zawierają żadnych braków danych. Ta sytuacja umożliwia nam pełne skorzystanie z dostępnych danych do przeprowadzenia analizy i uzyskania wiarygodnych wyników.
-
+```{r setup, include=FALSE}
 agencja_nieruchomosci <- agencja_nieruchomosci %>%
   mutate(area_m2=area/10.764) %>%
   relocate(area_m2, .after=area)
+```
 #Dodanie danych powierzchni w m2
 
+```{r setup, include=FALSE}
 agencja_nieruchomosci <- agencja_nieruchomosci %>%
   mutate(Cena_za_m2=price/area_m2) %>%
   relocate(Cena_za_m2, .after = price)
@@ -72,7 +254,7 @@ agencja_nieruchomosci <- agencja_nieruchomosci %>%
 
 
 
-```{r}
+```{r setup, include=FALSE}
 IQR_value <- IQR(agencja_nieruchomosci$price)
 upper_bound <- quantile(agencja_nieruchomosci$price, 0.75) + 3 * IQR_value
 lower_bound <- quantile(agencja_nieruchomosci$price, 0.25) - 3 * IQR_value
@@ -86,7 +268,7 @@ abline(h = lower_bound, col = "red", lty = 2)
 ```
 Wyniki powyższego wykresu ukazują, że większość cen nieruchomości mieści się w określonym przedziale, natomiastistnieją nieruchomości, których ceny są znacznie wyższe, co może wynikać z różnych czynników, takich jak lokalizacja, wielkość, cechy luksusowe itp.Z drugiej strony należy podkreślić, że cen skrajnie niskich, nielogicznych dla omawianej zmiennej nie odnotowano. W celu szerszej analizy zbadane zostały wartości zmiennych odstających o wysokich wartościach, by w 100% potwierdzić poprawność danych.
 
-```{r}
+```{r setup, include=FALSE}
 IQR_value <- IQR(agencja_nieruchomosci$price)
 upper_bound <- quantile(agencja_nieruchomosci$price, 0.75) + 1.5 * IQR_value
 lower_bound <- quantile(agencja_nieruchomosci$price, 0.25) - 1.5 * IQR_value
@@ -98,58 +280,61 @@ Najwyższa odstająca wartość wynosi 1 330 000 jp. potwierdzając tym samym po
 
 
 
-```{r}
+```{r setup, include=FALSE}
 
 boxplot(agencja_nieruchomosci$price, main = "wykres pudełkowy dla zmiennej price", 
         xlab = "price", ylab = "Wartości", 
         col = "cyan3", border = "darkslateblue", outline = TRUE, lwd = 1.2)
+```
 #Wyniki analizy statystycznej jasno wskazują, że nasze dane nie zawierają skrajnych ani nielogicznych wartości. Ten pozytywny wniosek pozwala nam na pewne podejście do dalszych analiz, mając pewność co do integralności naszych danych.
 
-```
 
-```{r}
+```{r setup, include=FALSE}
 plot(agencja_nieruchomosci$price, agencja_nieruchomosci$area_m2,  type = "o", col = "cyan3",
       main = "Wykres obserwacji dla zmiennej Cena",
      xlab = "Obserwacja", ylab = "Cena"     )
 
 ```
-```{r}
+
+```{r setup, include=FALSE}
 ggplot(agencja_nieruchomosci, aes(x=price, y=after_stat(density))) + geom_histogram(fill= "darkslateblue", bins=30, color="cyan3") + geom_density(color="red", size=1)
 
 ggplot(agencja_nieruchomosci, aes(x=Cena_za_m2, y=after_stat(density))) + geom_histogram(fill= "darkslateblue", bins=30, color="cyan3") + geom_density(color="red", size=1)
+```
 
 #Pokazanie rozkładu cen mieszkań oraz ceny za m2 na histogramie wraz z linią gęstości. 
-```
-```{r}
-ggplot(agencja_nieruchomosci, aes(x=price, y=area_m2, color=bedrooms)) + geom_point() + scale_x_log10() + scale_y_log10() + theme_classic()
-#Ilustracja rozkładu ceny nieruchomości na podstawie jej powierzchni, na wykresie mamy także podział na ilość pokojów. To wszystko mamy na zlogarytmowanej skali.
-```
 
-```{r}
+```{r setup, include=FALSE}
+ggplot(agencja_nieruchomosci, aes(x=price, y=area_m2, color=bedrooms)) + geom_point() + scale_x_log10() + scale_y_log10() + theme_classic()
+```
+#Ilustracja rozkładu ceny nieruchomości na podstawie jej powierzchni, na wykresie mamy także podział na ilość pokojów. To wszystko mamy na zlogarytmowanej skali.
+
+```{r setup, include=FALSE}
 ggplot(agencja_nieruchomosci, aes(price)) + geom_boxplot(aes(fill=factor(bedrooms))) + facet_wrap(bedrooms) +   labs(title="Rozkład cen nieruchomości w zależności od liczby sypialni")
 
 ggplot(agencja_nieruchomosci, aes(price)) + geom_boxplot(aes(fill=factor(bathrooms))) + facet_wrap(bathrooms) +   labs(title="Rozkład cen nieruchomości w zależności od liczby łazienek")
 
 ggplot(agencja_nieruchomosci, aes(price)) + geom_boxplot(aes(fill=factor(stories))) + facet_wrap(stories) +   labs(title="Rozkład cen nieruchomości w zależności od liczby pięter")
-
-#Zilustrowanie na wykresach box plot zależności rozkładu ceny od wybranej zmiennej
 ```
 
-```{r}
+#Zilustrowanie na wykresach box plot zależności rozkładu ceny od wybranej zmiennej
+
+
+```{r setup, include=FALSE}
 willa <- agencja_nieruchomosci %>%
   filter(area_m2 >=1000, prefarea=="yes")
+```
 #Wyszukanie najtańszej willi (powierzchnia powyżej 1000m2 i w preferowanej okolicy)
 
+```{r setup, include=FALSE}
 ggplot(willa, aes(x=price, y=Cena_za_m2)) + geom_point(size=3, color="cyan3")
-
+```
 #Rozkład willi na wykresie ceny i ceny za m2
   
 ```
 
-```{r}
+```{r setup, include=FALSE}
 ggplot(agencja_nieruchomosci, aes(x=price, y=area_m2, color=furnishingstatus)) + geom_point() + facet_wrap(parking) + labs(title="Rozkład cen nieruchomości w zależności od powierzchni z podziałem na ilość miejsc parkingowych i rozróżnieniem na status umeblowania")
-
-  
 ```
 
 ##Wnioskowanie statystyczne
@@ -162,7 +347,8 @@ ggplot(agencja_nieruchomosci, aes(x=price, y=area_m2, color=furnishingstatus)) +
 # 2. Cena za m2 uzależniona jest od tego czy mieszkanie znajduje się w preferowanej lokalizacji
 # 3. Liczba sypialni jest zależna od liczby pięter
 # 4. Liczba łazienek jest zależna od liczby sypialni
-```{r}
+
+```{r setup, include=FALSE}
 ggbetweenstats(data=agencja_nieruchomosci, x= furnishingstatus, y=price)
 ggbetweenstats(data=agencja_nieruchomosci, x= prefarea, y=Cena_za_m2)
 ggbarstats(data=agencja_nieruchomosci, x=stories, y=bedrooms)
