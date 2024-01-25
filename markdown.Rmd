@@ -63,5 +63,159 @@ summary(agencja_nieruchomosci)
 ```
 
 
+---
+title: "Grupa A"
+author: "Julianna Waluś"
+date: "7 12 2023"
+output: html_document
+---
 
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+options(scipen = 999, digits=3)  #wyłączam notację naukową, dajemy 3 miejsca po przecinku
+packageVersion("dplyr")
+library(tidyverse)   #pakiet wranglingowy, z fajkami i grafiką ggplot2
+library(rmdformats)  #pakiet z szablonami Markdown
+library(magrittr)   # pakiet do fajek
+library(lubridate)  # pakiet do operacji na datach
+install.packages("dplyr")
+library(dplyr)
+library(tidyr)
+library(naniar)
+library(visdat)
+library(dlookr)
+library(ggplot2)
+library(rmdformats)
+library(validate)
+library(validatetools)
+library(dcmodify)
+library(errorlocate)
+library(deductive)
+library(VIM)
+library(simputation)
+library(lumberjack)
+library(ISLR) 
+library(dlookr)
+library(xts)
+library(quantmod)
+library(ROCR)
+library(Information)
+library(scorecard)
+library(readr)
+install.packages("rstantools")
+library(rstantools)
+install.packages("ggstatsplot")
+library(ggstatsplot)
+
+agencja_nieruchomosci <- read_csv("agencja_nieruchomosci.csv")
+View(agencja_nieruchomosci)
+getwd()
+```
+
+```{r}
+### Wprowadzenie do projektu
+#Projekt z przedmiotu "analiza danych" będzie koncentrował się na kompleksowej analizie danych z agencji nieruchomości. Będziemy pracować na zestawie danych zawierającym 13 kluczowych zmiennych, w tym cenę nieruchomości, powierzchnię, liczbę sypialni i łazienek, liczbę pięter, dostępność połączenia z główną drogą, obecność pokoju gościnnego, piwnicy, systemu ogrzewania wody, klimatyzacji, liczby miejsc parkingowych, lokalizacji w preferowanym obszarze oraz statusu umeblowania. Naszym celem będzie czyszczenie, przygotowanie i poddanie analizie tych danych do dalszych badań, aby lepiej zrozumieć trendy i wzorce w branży nieruchomości.
+
+```
+
+```{r}
+attach(agencja_nieruchomosci)
+braki_danych <- colSums(is.na(agencja_nieruchomosci))
+braki_danych
+#Weryfikacja danych wykazała, że nasze zbiory są kompleksowe i nie zawierają żadnych braków danych. Ta sytuacja umożliwia nam pełne skorzystanie z dostępnych danych do przeprowadzenia analizy i uzyskania wiarygodnych wyników.
+
+agencja_nieruchomosci <- agencja_nieruchomosci %>%
+  mutate(area_m2=area/10.764) %>%
+  relocate(area_m2, .after=area)
+#Dodanie danych powierzchni w m2
+
+agencja_nieruchomosci <- agencja_nieruchomosci %>%
+  mutate(Cena_za_m2=price/area_m2) %>%
+  relocate(Cena_za_m2, .after = price)
+```
+
+
+```{r}
+#Statystki poszczególnych zmiennych
+summary(agencja_nieruchomosci)
+
+```
+
+
+```{r}
+
+boxplot(agencja_nieruchomosci$price, main = "wykres pudełkowy dla zmiennej price", 
+        xlab = "price", ylab = "Wartości", 
+        col = "cyan3", border = "darkslateblue", outline = TRUE, lwd = 1.2)
+#Wyniki analizy statystycznej jasno wskazują, że nasze dane nie zawierają skrajnych ani nielogicznych wartości. Ten pozytywny wniosek pozwala nam na pewne podejście do dalszych analiz, mając pewność co do integralności naszych danych.
+
+```
+
+```{r}
+plot(agencja_nieruchomosci$price, agencja_nieruchomosci$area_m2,  type = "o", col = "cyan3",
+      main = "Wykres obserwacji dla zmiennej Cena",
+     xlab = "Obserwacja", ylab = "Cena"     )
+
+```
+```{r}
+ggplot(agencja_nieruchomosci, aes(x=price, y=after_stat(density))) + geom_histogram(fill= "darkslateblue", bins=30, color="cyan3") + geom_density(color="red", size=1)
+
+ggplot(agencja_nieruchomosci, aes(x=Cena_za_m2, y=after_stat(density))) + geom_histogram(fill= "darkslateblue", bins=30, color="cyan3") + geom_density(color="red", size=1)
+
+#Pokazanie rozkładu cen mieszkań oraz ceny za m2 na histogramie wraz z linią gęstości. 
+```
+```{r}
+ggplot(agencja_nieruchomosci, aes(x=price, y=area_m2, color=bedrooms)) + geom_point() + scale_x_log10() + scale_y_log10() + theme_classic()
+#Ilustracja rozkładu ceny nieruchomości na podstawie jej powierzchni, na wykresie mamy także podział na ilość pokojów. To wszystko mamy na zlogarytmowanej skali.
+```
+
+```{r}
+ggplot(agencja_nieruchomosci, aes(price)) + geom_boxplot(aes(fill=factor(bedrooms))) + facet_wrap(bedrooms) +   labs(title="Rozkład cen nieruchomości w zależności od liczby sypialni")
+
+ggplot(agencja_nieruchomosci, aes(price)) + geom_boxplot(aes(fill=factor(bathrooms))) + facet_wrap(bathrooms) +   labs(title="Rozkład cen nieruchomości w zależności od liczby łazienek")
+
+ggplot(agencja_nieruchomosci, aes(price)) + geom_boxplot(aes(fill=factor(stories))) + facet_wrap(stories) +   labs(title="Rozkład cen nieruchomości w zależności od liczby pięter")
+
+#Zilustrowanie na wykresach box plot zależności rozkładu ceny od wybranej zmiennej
+```
+
+```{r}
+willa <- agencja_nieruchomosci %>%
+  filter(area_m2 >=1000, prefarea=="yes")
+#Wyszukanie najtańszej willi (powierzchnia powyżej 1000m2 i w preferowanej okolicy)
+
+ggplot(willa, aes(x=price, y=Cena_za_m2)) + geom_point(size=3, color="cyan3")
+
+#Rozkład willi na wykresie ceny i ceny za m2
+  
+```
+
+```{r}
+ggplot(agencja_nieruchomosci, aes(x=price, y=area_m2, color=furnishingstatus)) + geom_point() + facet_wrap(parking) + labs(title="Rozkład cen nieruchomości w zależności od powierzchni z podziałem na ilość miejsc parkingowych i rozróżnieniem na status umeblowania")
+
+  
+```
+
+```{r}
+## Nasze główne pytania badawcze, hipotezy:
+# H0- nie ma różnic pomiędzy kategoriami zmiennej
+# H1- istnieje różnica pomiędzy kategoriami zmiennej
+
+# 1. Cena mieszkania jest uzależniona od statusu umeblowania mieszkania
+# 2. Cena za m2 uzależniona jest od tego czy mieszkanie znajduje się w preferowanej lokalizacji
+# 3. Liczba sypialni jest zależna od liczby pięter
+# 4. Liczba łazienek jest zależna od liczby sypialni
+
+ggbetweenstats(data=agencja_nieruchomosci, x= furnishingstatus, y=price)
+ggbetweenstats(data=agencja_nieruchomosci, x= prefarea, y=Cena_za_m2)
+ggbarstats(data=agencja_nieruchomosci, x=stories, y=bedrooms)
+ggpiestats(data=agencja_nieruchomosci, x=bedrooms, y=bathrooms)
+
+## Interpretacje:
+# 1. Oś X przedstawia kategorie związane ze statusem umeblowania, a oś Y reprezentuje cenę nieruchomości. Wartość p mniejsza niż 0,05 sugeruje, że różnice między kategoriami są istotne statystycznie. Dla tego wykresu wszystkie porównane pary kategorii mają wartości p znacznie mniejsze niż 0,05, co sugeruje, że istnieją istotne różnice między tymi trzema kategoriami. Odrzucamy więc hipotezę zerową. Możemy zatem stwierdzić, że cena mieszkania jest uzależniona od statusu umeblowania mieszkania.
+# 2. Na osi X mamy podane czy nieruchomość znajduje się w preferowanej okolicy - tak lub nie, a na osi Y natomiast widnieje cena za m2 nieruchomości. Dla nieruchomości z preferowaną lokalizacją widzimy wyższe wartości cenowe. Rozkład wartości jest wyraźnie różny porównując te dwie grupy. Wartość p-value wynosząca 0,01 sugeruje, że istnieje zależność pomiędzy ceną za m2, a preferowaną lokalizacją nieruchomości.
+# 3. Oś pozioma przedstawia liczbę sypialni w nieruchomości, a oś pionowa pokazuje procentową częstotliwość określonej kategorii (liczby pięter) w ramach każdej grupy. W większośc grup p-value ma mniejszą wartość niż 0,05. Tylko skrajne grupy mają p-value na poziomie 0,11. Ogółem możemy stwierdzić, że liczba pięter w nieruchomości ma wpływ na liczbę sypialni.
+# 4. Na ostatnim wykresie mamy serię wykresów kołowych, które przedstawiają rozkład liczby sypialni w nieruchomościach, podzielony według liczby łazienek. Każdy wykres kołowy odpowiada nieruchomościom z określoną liczbą łazienek i pokazuje procentowy rozkład liczby sypialni w tych nieruchomościach. Podobnie jak w poprzednim wykresie, tylko skrajna grupa ma p-value większe od 0,05. Znajduję się tam jednak tylko jedna obserwacja. Ogólnie możemy powiedzieć, że liczba łazienek jest uzależniona od liczby sypialni w nieruchomościach.
+
+# DO ZROBIENIA użyć pakietów do statystyk opisowych, zrobić testy, wizualizacja markdown (TEMPLATKA), więcej komentarzy i interpretacji
 Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
