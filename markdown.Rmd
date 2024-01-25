@@ -26,11 +26,7 @@ library(ggstatsplot)
 
 library(reshape2)
 library(knitr)
-
-
-agencja_nieruchomosci <- read_csv("agencja_nieruchomosci.csv")
-View(agencja_nieruchomosci)
-getwd()
+attach(agencja_nieruchomosci)
 ```
 
 
